@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <unordered_map>
 #include <unordered_set>
+#include <thread>
+#include <future>
 #include "fixedSocket.h"
 #include "Updatable.h"
 #include "stringImproved.h"
@@ -90,6 +92,11 @@ public:
     void gotAudioPacket(int32_t client_id, const unsigned char* packet, int packet_size);
     void stopAudio(int32_t client_id);
     void sendAudioPacketFrom(int32_t client_id, sf::Packet& packet);
+
+    void httpGetNoResponse(string url),
+    void httpPostNoResponse(string url, string body);
+    std::future<string> httpGet(string url);
+    std::future<string> httpPost(string url, string body);
 private:
     void registerObject(P<MultiplayerObject> obj);
     void broadcastServerCommandFromObject(int32_t id, sf::Packet& packet);
@@ -103,6 +110,7 @@ private:
     void handleNewProxy(ClientInfo& info, int32_t temp_id);
     
     void runMasterServerUpdateThread();
+    const string& httpRequest(const string& url, sf::Http::Request::Method method= sf::Http::Request::Get, const string& body="");
     
     void handleBroadcastUDPSocket(float delta);
 

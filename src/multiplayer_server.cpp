@@ -583,17 +583,39 @@ void GameServer::stopMasterServerRegistry()
 
 void GameServer::runMasterServerUpdateThread()
 {
-    if (!master_server_url.startswith("http://"))
+   
+    LOG(INFO) << "Registering at master server " << master_server_url;
+    
+    sf::Http http(hostname, static_cast<uint16_t>(port));
+    while(!isDestroyed() && master_server_url != "")
     {
-        LOG(ERROR) << "Master server URL " << master_server_url << " does not start with \"http://\"";
-        return;
+
+        const string request_body = "port=" + string(listen_port) + "&name=" + server_name + "&version=" + string(version_number);
+        const string& response_body = httpRequest(master_server_url, sf::Http::Request::Post, request_body)
+        
+        if (response_body != "OK")
+        {
+            LOG(WARNING) << "Master server " << master_server_url << " reports error on registering: " << response_body;
+        }
+        
+        for(int n=0;n<60 && !isDestroyed() && master_server_url != "";n++)
+            sf::sleep(sf::seconds(1.0f));
     }
-    string hostname = master_server_url.substr(7);
+}
+
+const string& GameServer::httpRequest(const string& url, sf::Http::Request::Method method, const string& body)
+{
+    if (!url.startswith("http://"))
+    {
+        LOG(ERROR) << "Http request URL " << url << " does not start with \"http://\"";
+        return "";
+    }
+    string hostname = url.substr(7);
     int path_start = hostname.find("/");
     if (path_start < 0)
     {
-        LOG(ERROR) << "Master server URL " << master_server_url << " does not have a URI after the hostname";
-        return;
+        LOG(ERROR) << "Http request URL " << url << " does not have a URI after the hostname";
+        return "";
     }
     int port = 80;
     int port_start = hostname.find(":");
@@ -608,26 +630,38 @@ void GameServer::runMasterServerUpdateThread()
         hostname = hostname.substr(0, path_start);
     }
     
-    LOG(INFO) << "Registering at master server " << master_server_url;
-    
     sf::Http http(hostname, static_cast<uint16_t>(port));
-    while(!isDestroyed() && master_server_url != "")
+    sf::Http::Request request(uri, method, body);
+    
+    LOG(INFO) << "Sending Http request: " << url;
+    sf::Http::Response response = http.sendRequest(request, sf::seconds(10.0f));
+    // warning: this will block until response is received or timeout is reached.
+    // start this function in a thread to avoid blocking
+    if (response.getStatus() != sf::Http::Response::Ok)
     {
-        sf::Http::Request request(uri, sf::Http::Request::Post);
-        request.setBody("port=" + string(listen_port) + "&name=" + server_name + "&version=" + string(version_number));
-        
-        sf::Http::Response response = http.sendRequest(request, sf::seconds(10.0f));
-        if (response.getStatus() != sf::Http::Response::Ok)
-        {
-            LOG(WARNING) << "Failed to register at master server " << master_server_url << " (status " << response.getStatus() << ")";
-        }else if (response.getBody() != "OK")
-        {
-            LOG(WARNING) << "Master server " << master_server_url << " reports error on registering: " << response.getBody();
-        }
-        
-        for(int n=0;n<60 && !isDestroyed() && master_server_url != "";n++)
-            sf::sleep(sf::seconds(1.0f));
+        LOG(WARNING) << "Http request failed. (status " << response.getStatus() << ")";
+        return "";
+    }else{
+        return response.getBody();
     }
+    return "";
+}
+
+void GameServer::httpGetNoResponse(string url){
+    std::thread(&GameServer::httpRequest, this, url, sf::Http::Request::Get).detach();
+}
+
+void GameServer::httpPostNoResponse(string url, string body){
+    std::thread(&GameServer::httpRequest, this, url, sf::Http::Request::Post, body).detach();
+}
+
+// You need to store the future somewhere and call .get().
+std::future<string> GameServer::httpGet(string url){
+    return std::async(std::launch::async, &GameServer::httpRequest, this, url, sf::Http::Request::Get);
+}
+
+std::future<string> GameServer::httpPost(string url, string body){
+    return std::async(std::launch::async, &GameServer::httpRequest, this, url, sf::Http::Request::Post, body);
 }
 
 void GameServer::startAudio(int32_t client_id, int32_t target_identifier)
