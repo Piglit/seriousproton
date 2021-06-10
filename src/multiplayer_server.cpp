@@ -647,21 +647,30 @@ const string& GameServer::httpRequest(const string& url, sf::Http::Request::Meth
     return "";
 }
 
-void GameServer::httpGetNoResponse(string url){
+void GameServer::httpGetNoResponse(string url)
+{
     std::thread(&GameServer::httpRequest, this, url, sf::Http::Request::Get).detach();
 }
 
-void GameServer::httpPostNoResponse(string url, string body){
+void GameServer::httpPostNoResponse(string url, string body)
+{
     std::thread(&GameServer::httpRequest, this, url, sf::Http::Request::Post, body).detach();
 }
 
 // You need to store the future somewhere and call .get().
-std::future<string> GameServer::httpGet(string url){
+std::future<string> GameServer::httpGet(string url)
+{
     return std::async(std::launch::async, &GameServer::httpRequest, this, url, sf::Http::Request::Get);
 }
 
-std::future<string> GameServer::httpPost(string url, string body){
+std::future<string> GameServer::httpPost(string url, string body)
+{
     return std::async(std::launch::async, &GameServer::httpRequest, this, url, sf::Http::Request::Post, body);
+}
+
+void GameServer::notifyCampaignServer(const string params)
+{
+    httpPostNoResponse(campaign_server_url + "/log", "server-name=" + server_name + "&"+params);
 }
 
 void GameServer::startAudio(int32_t client_id, int32_t target_identifier)

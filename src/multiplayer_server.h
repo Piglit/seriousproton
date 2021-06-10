@@ -66,6 +66,7 @@ class GameServer : public Updatable
     std::unordered_map<int32_t, P<MultiplayerObject> > objectMap;
 
     string master_server_url;
+    string campaign_server_url;
     sf::Thread master_server_update_thread;
 public:
     GameServer(string server_name, int versionNumber, int listenPort = defaultServerPort);
@@ -87,6 +88,9 @@ public:
     void registerOnMasterServer(string master_server_url);
     void stopMasterServerRegistry();
     void setPassword(string password);
+	void setCampaignServerURL(string url) { campaign_server_url = url; }
+	string getCampaignServerURL() { return campaign_server_url; }
+    void notifyCampaignServer(string params);
 
     void startAudio(int32_t client_id, int32_t target_identifier);
     void gotAudioPacket(int32_t client_id, const unsigned char* packet, int packet_size);
