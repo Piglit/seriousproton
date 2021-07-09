@@ -4,10 +4,14 @@
 #include <memory>
 #include "multiplayer_server.h"
 
+class GameServerProxy;
+extern P<GameServerProxy> game_proxy;
+
 class GameServerProxy : public Updatable
 {
     sf::Clock lastReceiveTime;
     constexpr static float noDataDisconnectTime = 20.0f;
+    bool shutdownOnDisconnect;
 
     sf::UdpSocket broadcast_listen_socket;
     sf::TcpListener listenSocket;
@@ -40,6 +44,10 @@ public:
     GameServerProxy(sf::IpAddress hostname, int hostPort = defaultServerPort, string password = "", int listenPort = defaultServerPort, string proxyName="");
     GameServerProxy(string password = "", int listenPort = defaultServerPort, string proxyName="");
     virtual ~GameServerProxy();
+
+    bool connectToServer(sf::IpAddress hostname, int hostPort, string password);
+
+    void setShutdownOnDisconnect(bool);
 
     virtual void destroy() override;
 

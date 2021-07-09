@@ -2,16 +2,17 @@
 #include "multiplayer_internal.h"
 #include "engine.h"
 
+P<GameServerProxy> game_proxy;
 
 GameServerProxy::GameServerProxy(sf::IpAddress hostname, int hostPort, string password, int listenPort, string proxyName)
 : password(password), proxyName(proxyName)
 {
     LOG(INFO) << "Starting proxy server";
+    assert(!game_proxy);
+    game_proxy = this;
+	shutdownOnDisconnect = false;
     mainSocket = std::unique_ptr<TcpSocket>(new TcpSocket());
-    if (mainSocket->connect(hostname, static_cast<uint16_t>(hostPort)) != sf::Socket::Status::Done)
-        LOG(INFO) << "Failed to connect to server";
-    else
-        LOG(INFO) << "Connected to server";
+	connectToServer(hostname, hostPort, password);
     mainSocket->setBlocking(false);
     listenSocket.listen(static_cast<uint16_t>(listenPort));
     listenSocket.setBlocking(false);
@@ -36,6 +37,9 @@ GameServerProxy::GameServerProxy(string password, int listenPort, string proxyNa
 : password(password), proxyName(proxyName)
 {
     LOG(INFO) << "Starting listening proxy server";
+    assert(!game_proxy);
+    game_proxy = this;
+	shutdownOnDisconnect = false;
     listenSocket.listen(static_cast<uint16_t>(listenPort));
     listenSocket.setBlocking(false);
 
@@ -57,6 +61,27 @@ GameServerProxy::GameServerProxy(string password, int listenPort, string proxyNa
 
 GameServerProxy::~GameServerProxy()
 {
+	destroy();
+}
+
+bool GameServerProxy::connectToServer(sf::IpAddress hostname, int hostPort, string serverPassword)
+{
+	password = serverPassword;
+    if (mainSocket->connect(hostname, static_cast<uint16_t>(hostPort)) != sf::Socket::Status::Done)
+	{
+        LOG(INFO) << "Failed to connect to server";
+		return false;
+	}
+    else
+	{
+        LOG(INFO) << "Connected to server";
+		return true;
+	}
+}
+
+void GameServerProxy::setShutdownOnDisconnect(bool value)
+{
+	shutdownOnDisconnect = value;
 }
 
 void GameServerProxy::destroy()
@@ -64,6 +89,9 @@ void GameServerProxy::destroy()
     clientList.clear();
 
     broadcast_listen_socket.unbind();
+    listenSocket.close();
+	mainSocket->disconnect();
+    Updatable::destroy();
 }
 
 void GameServerProxy::update(float delta)
@@ -146,7 +174,8 @@ void GameServerProxy::update(float delta)
         {
             LOG(INFO) << "Disconnected proxy";
             mainSocket->disconnect();
-            engine->shutdown();
+			if (shutdownOnDisconnect)
+				engine->shutdown();
         }
     }
 
