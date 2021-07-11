@@ -3,6 +3,7 @@
 #include "engine.h"
 
 P<GameServerProxy> game_proxy;
+P<sf::TcpListener> serverListenSocket;
 
 GameServerProxy::GameServerProxy(sf::IpAddress hostname, int hostPort, string password, int listenPort, string proxyName)
 : password(password), proxyName(proxyName)
@@ -14,8 +15,10 @@ GameServerProxy::GameServerProxy(sf::IpAddress hostname, int hostPort, string pa
     mainSocket = std::unique_ptr<TcpSocket>(new TcpSocket());
 	connectToServer(hostname, hostPort, password);
     mainSocket->setBlocking(false);
-    listenSocket.listen(static_cast<uint16_t>(listenPort));
-    listenSocket.setBlocking(false);
+    if (!serverListenSocket)
+        serverListenSocket = new sf::TcpListener;
+    serverListenSocket.listen(static_cast<uint16_t>(listenPort));
+    serverListenSocket.setBlocking(false);
 
     newSocket = std::unique_ptr<TcpSocket>(new TcpSocket());
     newSocket->setBlocking(false);
@@ -40,8 +43,8 @@ GameServerProxy::GameServerProxy(string password, int listenPort, string proxyNa
     assert(!game_proxy);
     game_proxy = this;
 	shutdownOnDisconnect = false;
-    listenSocket.listen(static_cast<uint16_t>(listenPort));
-    listenSocket.setBlocking(false);
+    serverListenSocket.listen(static_cast<uint16_t>(listenPort));
+    serverListenSocket.setBlocking(false);
 
     newSocket = std::unique_ptr<TcpSocket>(new TcpSocket());
     newSocket->setBlocking(false);
@@ -89,7 +92,7 @@ void GameServerProxy::destroy()
     clientList.clear();
 
     broadcast_listen_socket.unbind();
-    listenSocket.close();
+    serverListenSocket.close();
 	mainSocket->disconnect();
     Updatable::destroy();
 }
@@ -184,7 +187,7 @@ void GameServerProxy::update(float delta)
         handleBroadcastUDPSocket(delta);
     }
 
-    if (listenSocket.accept(*newSocket) == sf::Socket::Status::Done)
+    if (serverListenSocket.accept(*newSocket) == sf::Socket::Status::Done)
     {
         ClientInfo info;
         info.socket = std::move(newSocket);

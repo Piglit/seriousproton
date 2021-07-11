@@ -16,13 +16,13 @@ class GameServer;
 class MultiplayerObject;
 
 extern P<GameServer> game_server;
+extern P<sf::TcpListener> serverListenSocket;
 
 class GameServer : public Updatable
 {
     sf::Clock updateTimeClock;
     sf::Clock aliveClock;
     sf::UdpSocket broadcast_listen_socket;
-    sf::TcpListener listenSocket;
     std::unique_ptr<TcpSocket> new_socket;
     string server_name;
     int listen_port;

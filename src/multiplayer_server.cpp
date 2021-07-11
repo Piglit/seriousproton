@@ -14,6 +14,7 @@ static std::unordered_map<string, int> multiplayer_stats;
 #endif
 
 P<GameServer> game_server;
+P<sf::TcpListener> serverListenSocket;
 
 GameServer::GameServer(string server_name, int version_number, int listen_port)
 : server_name(server_name), listen_port(listen_port), version_number(version_number), master_server_update_thread(&GameServer::runMasterServerUpdateThread, this)
@@ -30,12 +31,14 @@ GameServer::GameServer(string server_name, int version_number, int listen_port)
     nextObjectId = 1;
     nextclient_id = 1;
 
-    if (listenSocket.listen(static_cast<uint16_t>(listen_port)) != sf::TcpListener::Done)
+    if (!serverListenSocket)
+        serverListenSocket = new sf::TcpListener;
+    if (serverListenSocket.listen(static_cast<uint16_t>(listen_port)) != sf::TcpListener::Done)
     {
         LOG(ERROR) << "Failed to listen on TCP port: " << listen_port;
         destroy();
     }
-    listenSocket.setBlocking(false);
+    serverListenSocket.setBlocking(false);
     new_socket = std::unique_ptr<TcpSocket>(new TcpSocket());
     new_socket->setBlocking(false);
     if (broadcast_listen_socket.bind(static_cast<uint16_t>(listen_port)) != sf::UdpSocket::Done)
@@ -86,7 +89,7 @@ void GameServer::destroy()
     clientList.clear();
     objectMap.clear();
 
-    listenSocket.close();
+    serverListenSocket.close();
     broadcast_listen_socket.unbind();
 
     Updatable::destroy();
@@ -184,7 +187,7 @@ void GameServer::update(float /*gameDelta*/)
 
     handleBroadcastUDPSocket(delta);
 
-    if (listenSocket.accept(*new_socket)==sf::Socket::Status::Done)
+    if (serverListenSocket.accept(*new_socket)==sf::Socket::Status::Done)
     {
         ClientInfo info;
         info.socket = std::move(new_socket);

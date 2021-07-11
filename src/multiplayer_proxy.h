@@ -14,7 +14,6 @@ class GameServerProxy : public Updatable
     bool shutdownOnDisconnect;
 
     sf::UdpSocket broadcast_listen_socket;
-    sf::TcpListener listenSocket;
     std::unique_ptr<TcpSocket> newSocket;
 
     enum EClientReceiveState
