@@ -17,8 +17,8 @@ GameServerProxy::GameServerProxy(sf::IpAddress hostname, int hostPort, string pa
     mainSocket->setBlocking(false);
     if (!serverListenSocket)
         serverListenSocket = new sf::TcpListener;
-    serverListenSocket.listen(static_cast<uint16_t>(listenPort));
-    serverListenSocket.setBlocking(false);
+    serverListenSocket->listen(static_cast<uint16_t>(listenPort));
+    serverListenSocket->setBlocking(false);
 
     newSocket = std::unique_ptr<TcpSocket>(new TcpSocket());
     newSocket->setBlocking(false);
@@ -43,8 +43,8 @@ GameServerProxy::GameServerProxy(string password, int listenPort, string proxyNa
     assert(!game_proxy);
     game_proxy = this;
 	shutdownOnDisconnect = false;
-    serverListenSocket.listen(static_cast<uint16_t>(listenPort));
-    serverListenSocket.setBlocking(false);
+    serverListenSocket->listen(static_cast<uint16_t>(listenPort));
+    serverListenSocket->setBlocking(false);
 
     newSocket = std::unique_ptr<TcpSocket>(new TcpSocket());
     newSocket->setBlocking(false);
@@ -92,7 +92,7 @@ void GameServerProxy::destroy()
     clientList.clear();
 
     broadcast_listen_socket.unbind();
-    serverListenSocket.close();
+    serverListenSocket->close();
 	mainSocket->disconnect();
     Updatable::destroy();
 }
@@ -187,7 +187,7 @@ void GameServerProxy::update(float delta)
         handleBroadcastUDPSocket(delta);
     }
 
-    if (serverListenSocket.accept(*newSocket) == sf::Socket::Status::Done)
+    if (serverListenSocket->accept(*newSocket) == sf::Socket::Status::Done)
     {
         ClientInfo info;
         info.socket = std::move(newSocket);

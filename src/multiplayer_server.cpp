@@ -33,12 +33,12 @@ GameServer::GameServer(string server_name, int version_number, int listen_port)
 
     if (!serverListenSocket)
         serverListenSocket = new sf::TcpListener;
-    if (serverListenSocket.listen(static_cast<uint16_t>(listen_port)) != sf::TcpListener::Done)
+    if (serverListenSocket->listen(static_cast<uint16_t>(listen_port)) != sf::TcpListener::Done)
     {
         LOG(ERROR) << "Failed to listen on TCP port: " << listen_port;
         destroy();
     }
-    serverListenSocket.setBlocking(false);
+    serverListenSocket->setBlocking(false);
     new_socket = std::unique_ptr<TcpSocket>(new TcpSocket());
     new_socket->setBlocking(false);
     if (broadcast_listen_socket.bind(static_cast<uint16_t>(listen_port)) != sf::UdpSocket::Done)
@@ -89,7 +89,7 @@ void GameServer::destroy()
     clientList.clear();
     objectMap.clear();
 
-    serverListenSocket.close();
+    serverListenSocket->close();
     broadcast_listen_socket.unbind();
 
     Updatable::destroy();
@@ -187,7 +187,7 @@ void GameServer::update(float /*gameDelta*/)
 
     handleBroadcastUDPSocket(delta);
 
-    if (serverListenSocket.accept(*new_socket)==sf::Socket::Status::Done)
+    if (serverListenSocket->accept(*new_socket)==sf::Socket::Status::Done)
     {
         ClientInfo info;
         info.socket = std::move(new_socket);
